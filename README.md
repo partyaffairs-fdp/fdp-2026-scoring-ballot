@@ -25,9 +25,10 @@ alternatives (a free Netlify/Vercel edge function for real server-enforced
 auth, or a private GitHub repo with no public page at all) if that ever
 needs to change.
 
-**The current password is `OutreachDocket-233-2026`.** Share it with
-scorers directly (e.g. by email) — don't post it anywhere public, and don't
-put it in this repo in plain text.
+**The current password is not written down in this repo** (this repo is
+public, so anything here is world-readable — putting the password in this
+file would defeat the gate entirely). Whoever last rotated it should share
+it with scorers directly (e.g. by email or text), out of band from GitHub.
 
 ## 1. Push this repo to GitHub
 
