@@ -3,77 +3,67 @@
 Static, single-file scoring app (`index.html`) for grant reviewers. All 233
 applications are embedded in the page; each scorer's in-progress scores are
 saved locally in their own browser and submitted by downloading/emailing a
-CSV. There is no server-side data store, so hosting only needs to solve one
-problem: **keep the page itself private to invited scorers.**
+CSV. There is no server-side data store.
 
-## Why Cloudflare, not plain GitHub Pages
+## How access is protected
 
-GitHub Pages on a free account only serves **public** repos — anyone with the
-link (or who finds the `*.github.io` URL) could read every application in
-this file, including names, funding asks, and conflict-of-interest notes.
-Making it private on GitHub Pages requires GitHub Enterprise Cloud
-(~$21/user/mo) just for access control.
+The page shows a password prompt before revealing any content
+(`index.html` lines near `<body class="locked">`). The password isn't stored
+in plain text in the file — only its SHA-256 hash is — and entering it once
+unlocks the page on that device going forward (stored in `localStorage`).
 
-Instead: keep the source on GitHub (private repo is fine), and deploy it with
-**Cloudflare Pages** (free) + **Cloudflare Access** (free for up to 50 users).
-Cloudflare Pages builds straight from a private GitHub repo, and Access puts a
-real login wall (email one-time code) in front of the whole site before
-anyone reaches `index.html`.
+**Important limitation:** this is a deterrent, not real security. GitHub
+Pages only serves fully public sites, so the entire page — including every
+application's data — is downloaded to any visitor's browser whether or not
+they enter the password. Someone who opens the browser's dev tools, uses
+"view source," or fetches the raw file directly can read everything without
+ever seeing the prompt. This keeps out casual/accidental visitors and search
+engines that don't index it, but it does **not** stand up to anyone who
+actively tries to bypass it. That tradeoff was chosen deliberately to keep
+hosting free and GitHub-only — see the git history / conversation for the
+alternatives (a free Netlify/Vercel edge function for real server-enforced
+auth, or a private GitHub repo with no public page at all) if that ever
+needs to change.
 
-Total cost: **$0/month**, no domain required (you get a free
-`your-project.pages.dev` URL).
+**The current password is `OutreachDocket-233-2026`.** Share it with
+scorers directly (e.g. by email) — don't post it anywhere public, and don't
+put it in this repo in plain text.
 
 ## 1. Push this repo to GitHub
 
 ```bash
-git init
-git add index.html README.md
-git commit -m "Add 2026 Outreach Grant scoring ballot"
-```
-
-Create a new repo on GitHub (private is fine — Cloudflare Pages doesn't need
-it public) named e.g. `fdp-2026-scoring-ballot`, then:
-
-```bash
-git remote add origin https://github.com/<your-username>/fdp-2026-scoring-ballot.git
+git remote add origin https://github.com/<your-username>/<repo-name>.git
 git branch -M main
 git push -u origin main
 ```
 
-## 2. Deploy with Cloudflare Pages
+(Repo can be public — it needs to be, for GitHub Pages to work on a free
+account. Given the caveat above, treat the password as a light gate, not a
+guarantee of confidentiality.)
 
-1. Go to https://dash.cloudflare.com/ and sign up (free) if you don't have an
-   account.
-2. **Workers & Pages → Create → Pages → Connect to Git.**
-3. Authorize Cloudflare to access your GitHub account, pick the
-   `fdp-2026-scoring-ballot` repo.
-4. Build settings: **no build command, output directory = `/`** (it's a
-   static file, nothing to build).
-5. Deploy. You'll get a URL like `https://fdp-2026-scoring-ballot.pages.dev`.
+## 2. Enable GitHub Pages
 
-## 3. Lock it down with Cloudflare Access (free, up to 50 users)
+1. On the repo's GitHub page: **Settings → Pages**.
+2. Under **Build and deployment → Source**, choose **Deploy from a branch**.
+3. Branch: `main`, folder: `/ (root)`. Save.
+4. GitHub gives you a URL like `https://<your-username>.github.io/<repo-name>/`
+   within a minute or two. Share that URL (and the password, separately)
+   with scorers.
 
-1. In the Cloudflare dashboard, go to **Zero Trust** (left sidebar) → if
-   prompted, pick the **Free** plan.
-2. **Access → Applications → Add an application → Self-hosted.**
-3. Application domain: select the `pages.dev` domain from step 2 (or a
-   subdomain path if you only want to gate part of a site — here, gate the
-   whole thing).
-4. **Identity providers:** leave the built-in **One-time PIN** enabled (no
-   extra setup — Cloudflare emails a login code, nothing to configure).
-5. **Policies:** create a policy, e.g. "Scorers", rule: **Emails** — include
-   the list of scorer email addresses. Add your own email first to test.
-   You can come back and add/remove scorer emails anytime in this policy —
-   no redeploy needed.
-6. Save. Now visiting the `.pages.dev` URL prompts for an email + one-time
-   code before anything loads, and only allow-listed emails can get in.
+## Changing the password later
 
-## Updating the ballot data later
+1. Pick a new password.
+2. Compute its SHA-256 hex hash, e.g.:
+   ```bash
+   node -e "console.log(require('crypto').createHash('sha256').update('NEW-PASSWORD-HERE').digest('hex'))"
+   ```
+3. In `index.html`, find `var HASH = "..."` and replace the hex string with
+   the new hash. Also bump `var KEY = "fdp2026_unlocked_v1"` to `..._v2` (or
+   any new value) so previously-unlocked browsers are asked for the new
+   password instead of staying unlocked on the old one.
+4. Commit and push — GitHub Pages redeploys automatically.
 
-Any time you edit `index.html` (e.g. new applications, corrected data) and
-push to `main`, Cloudflare Pages auto-redeploys — no manual step needed.
+## Updating the ballot data
 
-## Adding/removing scorers
-
-Zero Trust → Access → Applications → this app → Policies → edit the email
-list. Takes effect immediately, nothing to redeploy.
+Edit `index.html` and push to `main`; GitHub Pages redeploys automatically,
+usually within a minute or two.

@@ -122,9 +122,56 @@ details.recuse select{margin:10px 0;width:100%;max-width:440px}
   .idx{display:none}
   .bar{display:none}
 }
+body.locked > *:not(#pwgate){display:none!important}
+#pwgate{position:fixed;inset:0;background:var(--desk);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}
+.pwbox{background:var(--paper);border:1px solid var(--rule);padding:34px 38px;max-width:380px;width:100%}
+.pwbox h1{font-family:var(--serif);font-weight:400;font-size:22px;margin:0 0 8px}
+.pwbox p{color:var(--ink2);font-size:14px;margin:0 0 18px}
+.pwbox input{width:100%;padding:9px 11px;border:1px solid var(--rule);border-radius:2px;font:inherit;background:#fcfdfe;margin-bottom:12px}
+.pwerror{color:var(--mark);font-size:13px;margin-top:2px}
 </style>
 </head>
-<body>
+<body class="locked">
+<div id="pwgate">
+  <div class="pwbox">
+    <h1>2026 Outreach Grant — Scoring Ballot</h1>
+    <p>Enter the committee password to continue.</p>
+    <input type="password" id="pwInput" placeholder="Password" autocomplete="off">
+    <button class="btn" id="pwSubmit" style="width:100%">Enter</button>
+    <div class="pwerror" id="pwError" hidden>Incorrect password.</div>
+  </div>
+</div>
+<script>
+(function(){
+  var HASH = "dc4b4747da8189b25fbe55aa05c837c5afc886c28fe0e65c5afa3424a3125320";
+  var KEY = "fdp2026_unlocked_v1";
+  function unlock(){
+    document.body.classList.remove("locked");
+    document.getElementById("pwgate").style.display = "none";
+  }
+  function sha256Hex(text){
+    return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(function(buf){
+      return Array.from(new Uint8Array(buf)).map(function(b){ return b.toString(16).padStart(2,"0"); }).join("");
+    });
+  }
+  if (localStorage.getItem(KEY) === HASH) { unlock(); }
+  function check(){
+    var input = document.getElementById("pwInput");
+    sha256Hex(input.value).then(function(h){
+      if (h === HASH) {
+        localStorage.setItem(KEY, HASH);
+        unlock();
+      } else {
+        document.getElementById("pwError").hidden = false;
+        input.value = "";
+        input.focus();
+      }
+    });
+  }
+  document.getElementById("pwSubmit").addEventListener("click", check);
+  document.getElementById("pwInput").addEventListener("keydown", function(e){ if (e.key === "Enter") check(); });
+})();
+</script>
 <header>
   <div class="brand">2026 Outreach Grant<span>Scoring ballot</span></div>
   <div class="spacer"></div>
